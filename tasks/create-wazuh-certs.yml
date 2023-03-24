@@ -1,0 +1,52 @@
+---
+# tasks - create-wazuh-certs.yml for nerve4-wazuh-indexer
+
+- name: Create a {{ indexer_directory }} directory if it does not exist
+  ansible.builtin.file:
+    path: "{{ indexer_directory }}"
+    state: directory
+    mode: '0755'
+
+- name: Download wazuh-certs-tool script to target machine
+  ansible.builtin.get_url:
+    url: "{{ cert_tool_url }}"
+    dest: "{{ indexer_directory }}/wazuh-certs-tool.sh"
+    mode: 0755
+  when: master_var is defined and master_var
+
+- name: Upload config to target machine
+  ansible.builtin.template:
+    src: config.j2
+    dest: "{{ indexer_directory }}/config.yml"
+    mode: 0644
+  when: master_var is defined and master_var
+
+- name: Create Certification on target machine
+  become: yes
+  ansible.builtin.command: bash ./wazuh-certs-tool.sh -A
+  args:
+    chdir: "{{ indexer_directory }}"
+  when: master_var is defined and master_var
+
+- name: Compress all the files
+  become: yes
+  ansible.builtin.command: tar -cvf ./wazuh-certificates.tar -C ./wazuh-certificates/ .
+  args:
+    chdir: "{{ indexer_directory }}"
+  when: master_var is defined and master_var
+
+- name: Remove config files
+  become: yes
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ remove_cf }}"
+  when: master_var is defined and master_var
+
+- name: Download certs.tar to local
+  become: yes
+  ansible.builtin.fetch:
+    src: "{{ indexer_directory }}/wazuh-certificates.tar"
+    dest: /tmp/
+    flat: yes
+  when: master_var is defined and master_var
