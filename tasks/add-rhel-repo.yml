@@ -1,0 +1,27 @@
+---
+# tasks - add-rhel-repo.yml for nerve4-wazuh-server
+
+- name: Install coreutils on Rhel Linux
+  become: true
+  ansible.builtin.yum:
+    name: "coreutils"
+    state: present
+
+- name: Download wayuh gpg key on Rhel Linux
+  become: true
+  ansible.builtin.get_url:
+    url: "{{ wazuh_gpg_url }}"
+    dest: "{{ wazuh_gpg_path }}"
+
+- name: Import a key from a file on Rhel Linux
+  become: true
+  ansible.builtin.rpm_key:
+    key: "{{ wazuh_gpg_path }}"
+    state: present
+
+- name: Add wazuh repository on Rhel Linux
+  become: true
+  ansible.builtin.shell: |
+    echo -e '[wazuh]\ngpgcheck=1\ngpgkey="{{ wazuh_gpg_url }}"\nenabled=1\nname=EL-$releasever - Wazuh\nbaseurl=https://packages.wazuh.com/4.x/yum/\nprotect=1' | tee "{{ wazuh_rhel_repo_path }}"
+  args:
+    creates: /etc/yum.repos.d/centos_o.repo

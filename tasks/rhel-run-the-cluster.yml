@@ -1,0 +1,31 @@
+---
+# tasks - rhel-run-the-cluster.yml for nerve4-wazuh-indexer
+
+- name: Run a Repo-reg check
+  stat:
+    path: "/etc/wazuh-indexer/foo.txt"
+  register: result
+
+- name: Just force systemd to re-execute itself
+  become: yes
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable and start wazuh-indexer service
+  ansible.builtin.systemd:
+    name: wazuh-indexer
+    state: started
+    enabled: true
+
+- name: Initialize the Cluster
+  become: yes
+  ansible.builtin.command: bash indexer-security-init.sh
+  args:
+    chdir: "/usr/share/wazuh-indexer/bin/"
+
+- name: Create an empty file after Cluster initialization
+  ansible.builtin.file:
+    path: /etc/wazuh-indexer/foo.txt
+    state: touch
+    mode: u=rw,g=r,o=r
+  when: result.stat.exists == false

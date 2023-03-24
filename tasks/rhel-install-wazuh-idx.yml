@@ -1,0 +1,121 @@
+---
+# tasks - rhel-install-wazuh-idx.yml for nerve4-wazuh-indexer
+
+- name: Install wazuh packages on Rhel Linux
+  become: true
+  ansible.builtin.yum:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ rhel_pkgs }}"
+
+- name: Download opensearch on Rhel Linux
+  become: true
+  ansible.builtin.template:
+    src: opensearch.j2
+    dest: "/etc/wazuh-indexer/opensearch.yml"
+    owner: wazuh-indexer
+    group: wazuh-indexer
+    mode: 0660
+
+- name: Create a {{ indexer_cert_path }} directory if it does not exist
+  ansible.builtin.file:
+    path: "{{ indexer_cert_path }}"
+    state: directory
+    owner: wazuh-indexer
+    group: wazuh-indexer
+    mode: 0755
+
+- name: Copy cert files on master hosts
+  ansible.builtin.copy:
+    src: "{{ indexer_directory }}/wazuh-certificates.tar"
+    dest: "{{ indexer_cert_path }}/wazuh-certificates.tar"
+    remote_src: yes
+  when: master_var is defined and master_var
+
+- name: Upload cert files on worker hosts
+  become: yes
+  ansible.builtin.copy:
+    src: "/tmp/wazuh-certificates.tar"
+    dest: "{{ indexer_cert_path }}/wazuh-certificates.tar"
+  when: worker_var is defined and worker_var
+
+- name: Extract cert files on master/worker hosts
+  ansible.builtin.unarchive:
+    src: "{{ indexer_cert_path }}/wazuh-certificates.tar"
+    dest: "{{ indexer_cert_path }}"
+    remote_src: yes
+
+- name: Change ownership of a directory
+  become: yes
+  ansible.builtin.file:
+    path: "{{ indexer_cert_path }}"
+    owner: wazuh-indexer
+    group: wazuh-indexer
+    mode: 0500
+
+- name: Copy xzy.pem
+  ansible.builtin.copy:
+    src: "{{ indexer_cert_path }}/{{ indexer_1_name }}.pem"
+    dest: "{{ indexer_cert_path }}/indexer.pem"
+    owner: wazuh-indexer
+    group: wazuh-indexer
+    mode: 0400
+    remote_src: yes
+  when: master_var is defined and master_var
+
+- name: Copy xzy-key.pem
+  ansible.builtin.copy:
+    src: "{{ indexer_cert_path }}/{{ indexer_1_name }}-key.pem"
+    dest: "{{ indexer_cert_path }}/indexer-key.pem"
+    owner: wazuh-indexer
+    group: wazuh-indexer
+    mode: 0400
+    remote_src: yes
+  when: master_var is defined and master_var
+
+- name: Copy xzy.pem
+  ansible.builtin.copy:
+    src: "{{ indexer_cert_path }}/{{ indexer_2_name }}.pem"
+    dest: "{{ indexer_cert_path }}/indexer.pem"
+    owner: wazuh-indexer
+    group: wazuh-indexer
+    mode: 0400
+    remote_src: yes
+  when: worker_var is defined and worker_var
+
+- name: Copy xzy-key.pem
+  ansible.builtin.copy:
+    src: "{{ indexer_cert_path }}/{{ indexer_2_name }}-key.pem"
+    dest: "{{ indexer_cert_path }}/indexer-key.pem"
+    owner: wazuh-indexer
+    group: wazuh-indexer
+    mode: 0400
+    remote_src: yes
+  when: worker_var is defined and worker_var
+
+- name: Delete old files on Master Nodees
+  become: yes
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ indexer_cert_path }}/{{ indexer_1_name }}.pem"
+    - "{{ indexer_cert_path }}/{{ indexer_1_name }}-key.pem"
+    - "{{ indexer_cert_path }}/wazuh-certificates.tar"
+
+- name: Setup the right permission level on cert files
+  become: yes
+  ansible.builtin.file:
+    path: "{{ indexer_cert_path }}"
+    owner: wazuh-indexer
+    group: wazuh-indexer
+    recurse: true
+    mode: 0400
+
+- name: Setup the right permission level on certs directory
+  become: yes
+  ansible.builtin.file:
+    path: "{{ indexer_cert_path }}"
+    owner: wazuh-indexer
+    group: wazuh-indexer
+    mode: 0500

@@ -1,0 +1,21 @@
+---
+dependencies: []
+
+galaxy_info:
+  author: nerve4 - Lee
+  description: Install Wazuh-indexer svc to Rhel Servers
+  license: "license (BSD, MIT)"
+  min_ansible_version: 2.4
+  platforms:
+    - name: RedHet
+      versions:
+        - 7
+    - name: RedHet
+      versions:
+        - 8
+  galaxy_tags:
+    - wazuh-indexer
+    - security
+    - search
+
+allow_duplicates: true

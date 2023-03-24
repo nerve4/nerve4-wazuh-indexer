@@ -1,0 +1,27 @@
+---
+# tasks - main.yml for nerve4-wazuh-indexer
+
+- name: Run a Repo-reg check
+  stat:
+    path: "{{ wazuh_rhel_repo_path }}"
+  register: result
+
+- include_tasks: create-wazuh-certs.yml
+
+- include_tasks: add-rhel-repo.yml
+  when: 
+    (ansible_distribution == "CentOS" and result.stat.exists == false) or
+    (ansible_distribution == "RedHat" and result.stat.exists == false) or
+    (ansible_distribution in "Rocky" and result.stat.exists == false)
+
+- include_tasks: rhel-install-wazuh-idx.yml
+  when: 
+    (ansible_distribution == "CentOS") or
+    (ansible_distribution == "RedHat") or
+    (ansible_distribution in "Rocky")
+
+- include_tasks: rhel-run-the-cluster.yml
+  when: 
+    (ansible_distribution == "CentOS") or
+    (ansible_distribution == "RedHat") or
+    (ansible_distribution in "Rocky")
